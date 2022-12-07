@@ -10,6 +10,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 #[AsCommand(
     name: 'app:load-data',
@@ -18,7 +19,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 class LoadDataCommand extends Command
 {
     const BASE_URL = 'https://jsonplaceholder.typicode.com';
-    const BATCH_SIZE = 25;
 
     private $em;
 
@@ -32,7 +32,7 @@ class LoadDataCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $users = $this->getFormattedUsers(true);
+        $users = $this->getUsers();
 
         if (!$users) {
             $io->error('Error with loading users');
@@ -46,19 +46,23 @@ class LoadDataCommand extends Command
             return Command::FAILURE;
         }
 
+        $formatted_users = $this->formatUsers($users);
+
         for ($i = 0; $i < count($posts); $i++) {
+            if (!array_key_exists($posts[$i]['userId'], $formatted_users)) {
+                $io->warning('Unable to find post\'s #' . $posts[$i]['id'] . ' author with ID: ' . $posts[$i]['userId']);
+                continue;
+            }
+
             $post = new Post;
             $post->setTitle($posts[$i]['title']);
             $post->setBody($posts[$i]['body']);
-            $post->setAuthorName($users[$posts[$i]['userId']]);
+            $post->setAuthorName($formatted_users[$posts[$i]['userId']]);
 
             $this->em->persist($post);
-
-            if (($i % self::BATCH_SIZE) === 0) {
-                $this->em->flush();
-                $this->em->clear();
-            }
         }
+
+        $this->em->flush();
 
         $io->success('Done');
 
@@ -67,38 +71,38 @@ class LoadDataCommand extends Command
 
     private function getPosts(): array
     {
-        $response = HttpClient::create()->request('GET', self::BASE_URL . '/posts');
+        $response = $this->request('posts');
 
-        if ($response->getStatusCode() === 200) {
-            return $response->toArray();
-        }
-
-        return null;
+        return $response->getStatusCode() === 200 ? $response->toArray() : null;
     }
 
     private function getUsers(): array
     {
-        $response = HttpClient::create()->request('GET', self::BASE_URL . '/users');
+        $response = $this->request('users');
 
-        if ($response->getStatusCode() === 200) {
-            return $response->toArray();
-        }
-
-        return null;
+        return $response->getStatusCode() === 200 ? $response->toArray() : null;
     }
 
-    private function getFormattedUsers(): array
+    private function request(string $path): ResponseInterface
     {
-        $users = $this->getUsers();
+        return HttpClient::create()->request('GET', self::BASE_URL . '/' . $path);
+    }
 
-        if (is_null($users)) {
-            return $users;
-        }
-
+    private function formatUsers(array $users): array
+    {
         $temp = [];
 
         for ($i = 0; $i < count($users); $i++) {
             $temp[$users[$i]['id']] = $users[$i]['name'];
+
+            // 
+            // We also can pass more data but it's not necessary
+            // 
+            // $temp[$users[$i]['id']] = [
+            //     'name' => $users[$i]['name'],
+            //     'username' => $users[$i]['username'],
+            //     'etc' => '...'
+            // ];
         }
 
         return $temp;
