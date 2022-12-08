@@ -4,11 +4,10 @@
 
 {% block body %}
 <style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
+    .wrapper { margin: 1em auto; max-width: 1000px; width: 95%; font: 18px/1.5 sans-serif; }
 </style>
 
-<div class="example-wrapper">
+<div class="wrapper">
     <div>
         {% if app.user %}
             <p>Hello, {{ app.user.email}}</p>
@@ -29,15 +28,30 @@
 
     <h1>Posts</h1>
 
-    {% for post in posts %}
-        <h2>{{ post.title }}</h2>
-
-        {% if app.user %}
-            <a href="{{ path('post_delete', {'id': post.id}) }}">Delete</a>
-        {% endif %}
-
-        <p>By <strong>{{ post.authorName }}</strong></p>
-        <article>{{ post.body }}</article>
-    {% endfor %}
+    <table>
+        <thead>
+            <th>ID</th>
+            <th>Author</th>
+            <th>Title</th>
+            <th>Body</th>
+            <th>Action</th>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+                <tr>
+                    <td>{{ post.id }}</td>
+                    <td>{{ post.authorName }}</td>
+                    <td>{{ post.title }}</td>
+                    <td>{{ post.body }}</td>
+                    <td>
+                        {# <a href="{{ path('post_delete', {'id': post.id}) }}">Delete</a> #}
+                        <form action="{{ path('post_delete', {'id': post.id}) }}" method="POST">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

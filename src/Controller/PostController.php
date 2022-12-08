@@ -19,7 +19,7 @@ class PostController extends AbstractController
         $this->em = $entityManagerInterface;
     }
 
-    #[Route('/', name: 'posts')]
+    #[Route('/lista', name: 'posts')]
     public function index(): Response
     {
         return $this->render('post/index.html.twig', [
@@ -27,15 +27,7 @@ class PostController extends AbstractController
         ]);
     }
 
-    #[Route('/posts/{id}', name: 'post_show')]
-    public function show(string $id): Response
-    {
-        return $this->render('post/show.html.twig', [
-            'posts' => $this->repository->findOne($id)
-        ]);
-    }
-
-    #[Route('/posts/{id}/delete', name: 'post_delete')]
+    #[Route('/posts/{id}/delete', name: 'post_delete', methods: ['POST'])]
     public function delete(string $id): Response
     {
         $post = $this->repository->find($id);
